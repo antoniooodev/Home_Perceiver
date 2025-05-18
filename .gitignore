@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.Python
+env/
+.venv/
+*.egg-info/
+
+# PyTorch
+*.pt
+weights/
+
+# macOS
+.DS_Store
+
+# VSCode / PyCharm
+.vscode/
+.idea/
