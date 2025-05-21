@@ -1,18 +1,26 @@
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
-.Python
+
+# Virtual environments
 env/
 .venv/
-*.egg-info/
+venv/
 
-# PyTorch
+# PyTorch checkpoints & weights
 *.pt
 weights/
 
 # macOS
 .DS_Store
 
-# VSCode / PyCharm
+# IDEs
 .vscode/
 .idea/
+
+# Logs and outputs
+output/
+logs/
+
+# Ignore any local config
+*.local

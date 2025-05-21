@@ -1,70 +1,83 @@
-# pose_utils.py
-# Helper functions for human pose estimation using PyTorch Keypoint R-CNN
+# File: pose/pose_utils.py
+# Real-time human pose estimation with confidence filtering and reduced smoothing.
 
 import torch
+import cv2
 import numpy as np
-from pathlib import Path
+from torchvision.transforms import functional as F
 from torchvision.models.detection import keypointrcnn_resnet50_fpn
+from collections import deque
 
-# Select device (CUDA if available, otherwise CPU or MPS)
+# Device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Global model cache
-_model = None
+# History buffer for smoothing: only last 2 frames now
+_pose_history = deque(maxlen=2)
 
-def load_pose_model(pretrained: bool = True, min_score: float = 0.5):
+def load_pose_model(pretrained: bool = True, min_score: float = 0.7):
     """
-    Load a Keypoint R-CNN model from torchvision.
-    Args:
-        pretrained (bool): whether to use pretrained COCO weights
-        min_score (float): minimum person detection score to keep
-    Returns:
-        model: the loaded model in eval mode
-        min_score: the filtering threshold
+    Load Keypoint R-CNN from torchvision.models.detection.
     """
-    global _model
-    if _model is None:
-        # Initialize Keypoint R-CNN with ResNet-50 FPN backbone
-        model = keypointrcnn_resnet50_fpn(pretrained=pretrained)
-        model.to(DEVICE)
-        model.eval()
-        _model = model
-    return _model, min_score
+    weights = 'KeypointRCNN_ResNet50_FPN_Weights.DEFAULT' if pretrained else None
+    model = keypointrcnn_resnet50_fpn(weights=weights)
+    model.to(DEVICE).eval()
+    return model, min_score
 
-def run_pose_inference(model, frame, min_score: float):
+def run_pose_inference(model, frame: np.ndarray, min_score: float = 0.7):
     """
-    Run pose estimation on a single BGR frame.
-    Args:
-        model: Keypoint R-CNN model
-        frame: BGR image (numpy array) as read by OpenCV
-        min_score: confidence threshold for person detections
-    Returns:
-        poses: list of dicts, each with 'keypoints': [(x,y,score), ...]
+    Run pose inference with:
+      - 640×640 letterbox (lower resolution)
+      - box & keypoint confidence filtering
+      - 2-frame temporal smoothing (shorter buffer)
+    Returns a list of dicts: {'keypoints': np.ndarray[17,3]}
     """
-    # Convert BGR to RGB and ensure positive-stride layout
-    rgb = frame[:, :, ::-1].copy()
-    # Normalize to [0,1] and convert to float32 numpy array
-    arr = rgb.astype(np.float32) / 255.0  # H x W x 3
-    # Convert to torch.Tensor: 1 x 3 x H x W
-    img = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(DEVICE)
+    # 1) Letterbox to 640×640
+    h0, w0 = frame.shape[:2]
+    size = 640
+    r = min(size/h0, size/w0)
+    new_unpad = (int(w0*r), int(h0*r))
+    pad_w = (size - new_unpad[0]) / 2
+    pad_h = (size - new_unpad[1]) / 2
+    resized = cv2.resize(frame, new_unpad, interpolation=cv2.INTER_LINEAR)
+    top, bottom = int(pad_h-0.1), int(pad_h+0.1)
+    left, right = int(pad_w-0.1), int(pad_w+0.1)
+    img = cv2.copyMakeBorder(resized, top, bottom, left, right,
+                             cv2.BORDER_CONSTANT, value=(114,114,114))
 
-    # Inference
+    # 2) To tensor (make contiguous to avoid negative strides)
+    rgb = np.ascontiguousarray(img[:, :, ::-1])
+    tensor = F.to_tensor(rgb).unsqueeze(0).to(DEVICE)
+
+    # 3) Inference
     with torch.no_grad():
-        outputs = model(img)[0]
+        outputs = model(tensor)[0]
+
+    # 4) Filter boxes and keypoints by score
+    keep = outputs['scores'] > min_score
+    kps = outputs['keypoints'][keep].cpu().numpy()            # [M,17,3]
+    kp_scores = outputs['keypoints_scores'][keep].cpu().numpy()
 
     poses = []
-    # Iterate over detected persons
-    scores = outputs['scores'].cpu().numpy()
-    keypoints = outputs['keypoints'].cpu().numpy()  # shape [N,17,3]
-    for idx, score in enumerate(scores):
-        if score < min_score:
-            continue
-        kps = keypoints[idx]  # 17 x 3
-        pose = {
-            'keypoints': [
-                (float(x), float(y), float(v)) for x, y, v in kps
-            ]
-        }
-        poses.append(pose)
+    for person_kps, person_kp_scores in zip(kps, kp_scores):
+        # zero-out low-confidence joints
+        person_kps[:,2] = np.where(person_kp_scores < min_score, 0, person_kps[:,2])
+        # unpad & unscale to original frame
+        person_kps[:,:2] = (person_kps[:,:2] - np.array([left, top])) / r
+        # clip coords
+        person_kps[:,0] = person_kps[:,0].clip(0, w0-1)
+        person_kps[:,1] = person_kps[:,1].clip(0, h0-1)
+        poses.append({'keypoints': person_kps})
 
-    return poses
+    # 5) Temporal smoothing over last 2 frames
+    _pose_history.append(poses)
+    smoothed = []
+    for idx in range(len(poses)):
+        # collect matching person across history
+        stacks = [epoch[idx]['keypoints'] for epoch in _pose_history if len(epoch)>idx]
+        arr = np.stack(stacks, axis=0)               # [T,17,3]
+        avg_xy = arr[:,:,:2].mean(axis=0)            # [17,2]
+        avg_v  = arr[:,:,2].mean(axis=0)             # [17]
+        kp = np.concatenate([avg_xy, avg_v[:,None]], axis=1)
+        smoothed.append({'keypoints': kp})
+
+    return smoothed
