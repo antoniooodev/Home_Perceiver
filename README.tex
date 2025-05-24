@@ -1,0 +1,121 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Configurazione dei blocchi di codice
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  stringstyle=\color{teal},
+  commentstyle=\color{gray},
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  captionpos=b
+}
+
+\title{\bfseries Visual Detection \\ README}
+\author{Antonio Tangaro \\ \small Deep Learning Course Project}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Panoramica del Progetto}
+Questo repository implementa due modalità di inferenza in tempo reale:
+\begin{itemize}
+  \item \textbf{Mode A:} Outline “tight” delle persone tramite segmentazione instance (YOLOv8-nano-seg).
+  \item \textbf{Mode B:} Rilevazione multi-classe COCO (YOLOv8-nano) con bounding box e label.
+  \item \textbf{Detect Multiclass Only:} Rilevazione multi-classe con YOLOv5-nano via \texttt{torch.hub}.
+\end{itemize}
+
+\section*{Prerequisiti}
+\begin{itemize}
+  \item Python 3.8--3.11
+  \item GPU con CUDA (es.\ RTX 3060 Ti) oppure fallback CPU
+  \item Dipendenze:
+\end{itemize}
+
+\begin{lstlisting}[language=bash,caption={Installazione dipendenze}]
+pip install -r requirements.txt
+\end{lstlisting}
+
+\section*{Struttura delle Cartelle}
+\begin{description}
+  \item[\texttt{core\_utils/}] \texttt{VideoStream} cross-platform
+  \item[\texttt{detector/}] Utility per YOLOv5 e YOLOv8
+  \item[\texttt{pose/}] Pose Estimation (Keypoint R-CNN)
+  \item[\texttt{tracker/}] Tracker multi-person IoU-based
+  \item[\texttt{scripts/}] Entry-point demo:
+    \begin{itemize}
+      \item \texttt{demo\_modeA.py}
+      \item \texttt{demo\_modeB.py}
+      \item \texttt{detect\_multiclass.py}
+    \end{itemize}
+  \item[\texttt{coco/}] Dataset COCO (per fasi future)
+\end{description}
+
+\section*{Uso}
+
+\subsection*{Mode A: Tight Person Outline}
+\begin{lstlisting}[language=bash]
+python scripts/demo_modeA.py
+\end{lstlisting}
+\begin{itemize}
+  \item Carica YOLOv8-nano-seg
+  \item Estrae maschere persone, calcola contorno
+  \item Disegna outline + FPS
+\end{itemize}
+
+\subsection*{Mode B: Multi-Class Detection}
+\begin{lstlisting}[language=bash]
+python scripts/demo_modeB.py
+\end{lstlisting}
+\begin{itemize}
+  \item Carica YOLOv8-nano-seg
+  \item Outline persona + label “person”
+  \item Bounding box + label per le altre classi COCO
+  \item FPS
+\end{itemize}
+
+\subsection*{Detect Multiclass Only (YOLOv5-nano)}
+\begin{lstlisting}[language=bash]
+python scripts/detect_multiclass.py
+\end{lstlisting}
+\begin{itemize}
+  \item Carica YOLOv5-nano via \texttt{torch.hub}
+  \item Bounding box + confidence per tutte le classi COCO
+  \item FPS
+\end{itemize}
+
+\section*{Fasi Completate}
+\begin{enumerate}
+  \item Phase 1: Setup \& Acquisition
+  \item Phase 2: Object Detection
+  \item Phase 3: Pose Estimation
+  \item Phase 4: Mode A – Tracking \& Tight Outline
+\end{enumerate}
+
+\section*{Prossimi Passi}
+\begin{enumerate}
+  \item Phase 5: Mode B – COCO Multi-Class Detection Only
+  \item Phase 6: End-to-End Integration \& Benchmarking
+  \item Phase 7: Data Export \& Final Report
+\end{enumerate}
+
+\section*{Licenza}
+Questo progetto è rilasciato sotto la licenza MIT. Vedi \texttt{LICENSE} per i dettagli.
+
+\section*{Ringraziamenti}
+\begin{itemize}
+  \item YOLOv5 \& YOLOv8 (Ultralytics)
+  \item Torchvision Keypoint R-CNN
+  \item COCO dataset: “Common Objects in Context”
+\end{itemize}
+
+\end{document}
