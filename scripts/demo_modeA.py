@@ -4,32 +4,32 @@
 # – No skeleton, only tight polygonal outline
 # – IoU‐based tracker assigns persistent IDs
 
+from core_utils.data_loader import get_video_stream
+from tracker.tracker import Tracker
+from pathlib import Path
+from ultralytics import YOLO
+
 import sys
 import time
-from pathlib import Path
-
 import cv2
 import numpy as np
 import torch
-from ultralytics import YOLO
 
 # project root on PYTHONPATH
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from core_utils.data_loader import get_video_stream
-from tracker.tracker import Tracker, Track
 
 # device selection
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def load_model():
     """
     Load YOLOv8-nano segmentation model (yolov8n-seg.pt) pretrained on COCO.
     """
-    model = YOLO('yolov8n-seg.pt', task='segment')
+    model = YOLO("yolov8n-seg.pt", task="segment")
     model.model.to(DEVICE).fuse()  # fuse conv+bn for speed
     return model
 
@@ -96,12 +96,14 @@ def main():
 
         # 5) extract bounding boxes + classes for IoU‐based tracking
         #    result.boxes.xyxy: [N,4], result.boxes.conf: [N], result.boxes.cls: [N]
-        bxy = result.boxes.xyxy.cpu().numpy()      # [N,4]
-        confs = result.boxes.conf.cpu().numpy()    # [N]
-        classes = result.boxes.cls.cpu().numpy()   # [N]
+        bxy = result.boxes.xyxy.cpu().numpy()  # [N,4]
+        confs = result.boxes.conf.cpu().numpy()  # [N]
+        classes = result.boxes.cls.cpu().numpy()  # [N]
         dets = []
         for (x1, y1, x2, y2), conf, cls in zip(bxy, confs, classes):
-            dets.append([float(x1), float(y1), float(x2), float(y2), float(conf), int(cls)])
+            dets.append(
+                [float(x1), float(y1), float(x2), float(y2), float(conf), int(cls)]
+            )
 
         # 6) update tracker only on person detections
         person_dets = [d for d in dets if d[5] == 0]
@@ -133,7 +135,7 @@ def main():
                     (tx - 2, ty - th - 2),
                     (tx + tw + 2, ty + 2),
                     (0, 255, 0),
-                    cv2.FILLED
+                    cv2.FILLED,
                 )
                 # draw ID text in black
                 cv2.putText(
@@ -144,7 +146,7 @@ def main():
                     scale,
                     (0, 0, 0),
                     thickness,
-                    cv2.LINE_AA
+                    cv2.LINE_AA,
                 )
 
         # 8) compute & display true FPS
@@ -159,11 +161,11 @@ def main():
             1.0,
             (0, 255, 255),
             2,
-            cv2.LINE_AA
+            cv2.LINE_AA,
         )
 
         cv2.imshow("Mode A: Tight Outline + Tracking", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     vs.release()

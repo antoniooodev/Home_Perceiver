@@ -1,8 +1,10 @@
-import cv2
 import os
+
+import cv2
 import torch
 
 REMOTE_URL = os.getenv("REMOTE_URL", "http://192.168.1.157:8000/stream")
+
 
 class VideoStream:
     def __init__(self, source=0, use_ffmpeg=False):
@@ -33,7 +35,7 @@ class VideoStream:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if to_tensor:
             img = torch.from_numpy(frame_rgb).float() / 255.0  # [H,W,3]
-            img = img.permute(2,0,1).unsqueeze(0)             # [1,3,H,W]
+            img = img.permute(2, 0, 1).unsqueeze(0)  # [1,3,H,W]
             return frame, img
         return frame, None
 
@@ -53,5 +55,7 @@ def get_video_stream(remote_url: str = None, use_ffmpeg: bool = False):
         try:
             return VideoStream(source=url, use_ffmpeg=use_ffmpeg)
         except RuntimeError as e:
-            print(f"[VideoStream] Warning: cannot open '{url}', falling back to local webcam: {e}")
+            print(
+                f"[VideoStream] Warning: cannot open '{url}', falling back to local webcam: {e}"
+            )
     return VideoStream(source=0, use_ffmpeg=False)

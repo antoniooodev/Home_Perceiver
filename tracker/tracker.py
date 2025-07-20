@@ -9,10 +9,11 @@ class Track:
     """
     Represents a single tracked object with an ID and history of bounding boxes.
     """
+
     def __init__(self, track_id: int, initial_box: list, max_history: int = 30):
         self.id = track_id
         self.boxes = [initial_box]  # list of [x1, y1, x2, y2]
-        self.lost_frames = 0        # consecutive frames without association
+        self.lost_frames = 0  # consecutive frames without association
         self.max_history = max_history
 
     def predict_box(self) -> list:
@@ -41,6 +42,7 @@ class Tracker:
     """
     IoU-based multi-object tracker that assigns consistent IDs to detections.
     """
+
     def __init__(self, iou_threshold: float = 0.3, max_lost: int = 5):
         self.iou_threshold = iou_threshold
         self.max_lost = max_lost
