@@ -1,9 +1,5 @@
 # Home Perceiver – Real‑Time Privacy‑Aware Perception Module
 
-<div align="center">
-    <img src="docs/banner.png" width="70%" alt="Demo montage"/>
-</div>
-
 > **TL;DR** A cross‑platform stack (PyTorch → OpenCV) that runs
 > in real time on GPU/CPU/MPS, detects objects & people, segments persons for
 > privacy, tracks IDs, estimates poses, exports structured logs, and builds
