@@ -1,0 +1,58 @@
+% !TEX root = template.tex
+
+\section{Related Work}
+
+\textbf{Object detection.} Early convolutional detectors adopted
+a two‐stage paradigm---region‐proposal generation followed by
+classification and refinement---that achieved high accuracy at the
+cost of double‐digit millisecond latency~\cite{girshick2014rcnn,girshick2015fastrcnn}.
+Single‐stage families such as YOLO replaced this with a dense‐prediction
+head~\cite{redmon2017yolo9000} and have since incorporated lightweight
+backbones~\cite{sandler2018mobilenetv2}, depth‐wise separable
+convolutions~\cite{chollet2017xception}, and NAS‐designed blocks~\cite{howard2019mobilenetv3},
+pushing throughput beyond 100\,fps on commodity GPUs while preserving
+competitive accuracy~\cite{bochkovskiy2020yolov4}.
+
+\textbf{Instance segmentation.} Encoder–decoder frameworks first
+brought pixel‐level masks to real‐time vision, but at 2--3\,$\times$
+the compute of detection alone~\cite{he2017maskrcnn}.  Modern heads share
+the detector backbone and fuse multi‐scale features in a single pass,
+enabling near‐frame‐rate inference even without dedicated
+accelerators~\cite{bolya2019yolact}.  Performance, however, still
+degrades in household scenes where long‐tail objects are under-
+represented in canonical benchmarks~\cite{tangaro2025homeobjects3k}.
+
+\textbf{Human pose estimation.} Top‐down R-CNN variants remain the
+most precise for the standard 17 COCO keypoints yet are
+computationally heavy~\cite{he2017maskrcnn}.  Bottom-up methods such
+as OpenPose sacrifice some precision for greater speed,
+particularly in crowded views~\cite{cao2018openpose}.  Recent hybrid
+designs like HRNet combine lightweight high-resolution features
+with dynamic refinement, regaining accuracy while staying within
+the power envelope of edge devices~\cite{sun2019deep}.
+
+\textbf{Multi-object tracking.} Classic pipelines couple Kalman
+prediction with Hungarian IoU assignment as in SORT~\cite{bewley2016simple}.
+Deep re-identification embeddings improve robustness in dense
+settings but add overhead~\cite{wojke2017simple}.  More recent work
+such as ByteTrack achieves state-of-the-art robustness by associating
+low-confidence detections~\cite{zhang2022bytetrack}, though in small
+indoor spaces a greedy IoU matcher is usually sufficient, offering
+sub-millisecond latency and negligible memory use.
+
+\textbf{Domain adaptation and datasets.} Closing the gap between
+curated benchmarks and household deployments calls for synthetic
+augmentation or selective fine-tuning on compact, task-specific
+corpora.  Domain randomization has been shown to transfer deep
+networks from simulation to real data effectively~\cite{tremblay2018training}.
+Datasets such as \emph{HomeObjects-3K}, focused on everyday items,
+significantly boost recall relative to their modest annotation
+size~\cite{tangaro2025homeobjects3k}.
+
+\textbf{Positioning of this work.} Unlike prior studies that optimise
+a single task, \emph{Home-Perceiver} unifies detection, segmentation,
+17-point pose estimation, and lightweight IoU tracking within one
+CPU/GPU-agnostic pipeline.  Targeted fine-tuning closes the household-
+object coverage gap without violating real-time constraints, and the
+fully reproducible code plus energy-efficiency analysis provide a
+practical reference for coursework and future research.

@@ -1,0 +1,120 @@
+\documentclass[10pt,conference,letterpaper]{IEEEtran}
+
+% Encoding and language
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{listings}
+
+\DeclareUnicodeCharacter{2013}{--}      % U+2013 en-dash
+\DeclareUnicodeCharacter{2014}{---}     % U+2014 em-dash
+\DeclareUnicodeCharacter{2019}{'}  
+
+% Hyperlinks
+\usepackage{hyperref}
+
+% Math support must come before cleveref
+\usepackage{amsmath,amssymb,amsfonts}
+
+% Clever references
+\usepackage[capitalize,nameinlink]{cleveref}
+\crefname{section}{Sec.}{Secs.}
+\Crefname{section}{Section}{Sections}
+\newcommand{\secref}[1]{\cref{#1}}
+
+% Float barriers and improved tables
+\usepackage[section]{placeins}   % \FloatBarrier
+\usepackage{booktabs,tabularx,array}  % \toprule etc.
+
+
+
+% Standard packages
+\usepackage{xcolor}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{import}
+\usepackage{multirow}
+\usepackage{cite}
+\usepackage[export]{adjustbox}
+\usepackage{breqn}
+\usepackage{mathrsfs}
+\usepackage{acronym}
+\usepackage{setspace}
+\usepackage{bm}
+\usepackage{stackengine}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+
+% Mathematical operators
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\def\delequal{\mathrel{\ensurestackMath{\stackon[1pt]{=}{\scriptscriptstyle\Delta}}}}
+
+% Page layout adjustments
+\graphicspath{{./figures/}}
+\setlength{\belowcaptionskip}{0mm}
+\setlength{\textfloatsep}{8pt}
+\setlength{\columnsep}{0.2in}
+
+% Title and author information
+\title{Home Perceiver}
+\author{Antonio Tangaro$^\dag$\\
+  \thanks{$^\dag$Department of Information Engineering, University of Padova, \texttt{antonio.tangaro@studenti.unipd.it}}}
+\IEEEoverridecommandlockouts
+
+% Remark environment for inline notes
+\newcounter{remark}[section]
+\newenvironment{remark}[1][]{\refstepcounter{remark}\par\medskip
+  \textbf{Remark~\thesection.\theremark. #1} \rmfamily}{\medskip}
+
+\lstdefinelanguage{BibTeX}
+  {keywords={%
+      @article,@book,@collectedbook,@conference,@electronic,@ieeetranbstctl,%
+      @inbook,@incollectedbook,@incollection,@injournal,@inproceedings,%
+      @manual,@mastersthesis,@misc,@patent,@periodical,@phdthesis,@preamble,%
+      @proceedings,@standard,@string,@techreport,@unpublished%
+      },
+   comment=[l][\itshape]{@comment},
+   sensitive=false,
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Real-time visual perception on \emph{consumer} hardware is a key enabler for privacy-preserving smart-home services such as activity logging, safety monitoring, and hands-free control. Achieving $<\!50$ ms end-to-end latency while recognising the long-tail of household objects, human poses, and identities remains challenging.
+
+We introduce \textbf{Home-Perceiver}, a lightweight pipeline that combines (i) a YOLOv8-seg backbone, (ii) a 17-keypoint ResNet-50 Keypoint-RCNN, and (iii) an IoU tracker. Two complementary detectors—one trained on COCO, the other fine-tuned on \emph{HomeObjects-3K}—extend the object vocabulary without inflating model size. Each frame is processed as follows: detections $\rightarrow$ instance masks $\rightarrow$ privacy-aware silhouettes $\rightarrow$ keypoints $\rightarrow$ stable IDs, and finally exported as JSONL and optional video. The entire stack runs \emph{on-device} via PyTorch~2.3 with Metal (macOS) or CUDA (Linux/Windows).
+
+On a Mac M2 Pro the single-stream configuration delivers 52 fps at $640\times360$ px with 67.4 mAP\textsubscript{50} on HomeObjects-3K. A dual-stream “Mode B” on an RTX 3060 Ti attains 118 fps and 70.2 mAP\textsubscript{50}. Compared with a YOLOv5-small baseline, Home-Perceiver yields +15\% mAP at similar speed. These results demonstrate that real-time, privacy-preserving scene understanding is feasible on commodity laptops and edge GPUs.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=0.5\linewidth]{./figure/room_obj.jpg}
+  \label{fig:esempio}
+\end{figure}
+
+\end{abstract}
+
+\begin{IEEEkeywords}
+Real-time perception, object detection, human pose estimation, multi-object tracking, privacy-preserving vision
+\end{IEEEkeywords}
+
+\input{intro}
+\input{related}
+\input{model}
+\input{dataset_training}
+\input{results}
+\input{conclusions}
+
+% Bibliography
+\clearpage  
+\nocite{*}
+\bibliographystyle{IEEEtran}
+\bibliography{biblio}
+
+\end{document}

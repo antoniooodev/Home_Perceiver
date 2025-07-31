@@ -1,0 +1,81 @@
+\section{Datasets \& Training Details}
+\label{sec:data-train}
+
+This section summarises the data sources, splits and training protocols
+used to obtain the models evaluated in \secref{sec:results}.  
+No external data beyond the datasets listed below were employed.
+
+% --------------------------------------------------
+\subsection{Datasets}
+\begin{table}[ht]
+    \small
+    \setlength{\tabcolsep}{3pt}
+    \caption{Public datasets used for training and evaluation.}
+    \label{tab:datasets}
+    \begin{tabularx}{\linewidth}{@{}l r r c >{\raggedright\arraybackslash}X@{}}
+      \toprule
+      \textbf{Dataset} & \textbf{Images} & \textbf{Classes} & \textbf{Task} & \textbf{Split / Note}\\
+      \midrule
+      COCO 2017                & 118\,k & 80 & det./seg. & train / val \cite{lin2014microsoft} \\
+      HomeObjects-3K           & 2\,973 & 48 & det./seg. & train / val / test (70/15/15) \cite{tangaro2025homeobjects3k} \\
+      COCO-kp14 (pose)         & 118\,k & 17 keyp. & pose & train / val \cite{lin2014microsoft} \\
+      Live-Capture$^{*}$       & 7 videos & — & stress test & — \\
+      \bottomrule
+    \end{tabularx}
+    \vspace{0.3em}
+    \footnotesize\raggedright
+    $^{*}$Seven 60-s 1080p sequences recorded in a kitchen--living space;\
+    used only for throughput, tracking-stability and privacy-filter tests.
+\end{table}
+
+\paragraph*{COCO 2017} We employ the full \textit{train2017} split to
+initialize the YOLOv8s-seg backbone and for pose-head pre-training
+(\textit{kp\_train2017}) \cite{lin2014microsoft}. The \textit{val2017}
+split provides a standardised benchmark for cross-domain generalisation.
+
+\paragraph*{HomeObjects-3K} This curated set extends household coverage
+with 48 everyday categories under-represented in COCO \cite{tangaro2025homeobjects3k}.  
+Images were manually annotated with instance masks and class labels.
+
+% --------------------------------------------------
+\subsection{Training Protocol}
+\label{ssec:train-protocol}
+
+\begin{table}[ht]
+    \small
+    \setlength{\tabcolsep}{3pt}
+    \caption{Key hyper-parameters for each model component.}
+    \label{tab:hyper}
+    \begin{tabularx}{\linewidth}{@{}l c c c >{\raggedright\arraybackslash}X@{}}
+      \toprule
+      \textbf{Component} & \textbf{Ep.} & \textbf{Batch} & \textbf{LR} &
+      \textbf{Optimizer \& notes}\\
+      \midrule
+      YOLOv8s-seg (COCO)         & 150 & 64 & $1\times10^{-3}$ &
+      SGD, cosine decay~\cite{loshchilov2016sgdr}, Mosaic~\cite{bochkovskiy2020yolov4} + MixUp~\cite{zhang2017mixup} \\
+      YOLOv8s-seg (HO-3K ft)     & 50  & 32 & $3\times10^{-4}$ &
+      SGD (first 3 stages frozen) \\
+      \addlinespace[1pt]
+      Keypoint-RCNN pre-train    & 90  & 16 & $5\times10^{-4}$ &
+      AdamW~\cite{loshchilov2019decoupled}, half-res input \\
+      Pose fine-tune (mixed)     & 20  & 8  & $1\times10^{-4}$ &
+      AdamW, CutMix~\cite{yun2019cutmix} + color jitter \\
+      \bottomrule
+    \end{tabularx}
+\end{table}
+
+\textbf{Detector fine-tuning}: After COCO pre-training, the detector is
+fine-tuned on HomeObjects-3K for 50 epochs with a reduced learning rate.
+Class IDs overlapping with COCO (e.g.\ \textit{cup}) share heads to
+prevent catastrophic forgetting. The best-mAP checkpoint is exported to
+\texttt{.pt} and ONNX.
+
+\textbf{Pose head}: The Keypoint-RCNN branch is first trained on the
+standard COCO split (17 keypoints~\cite{lin2014microsoft}), then lightly
+fine-tuned on HomeObjects-3K to adapt to indoor scenes.
+
+\textbf{Hardware \& Framework}: All training runs used an RTX\,3060\,Ti
+(8\,GB) with PyTorch~2.3 + CUDA\,12.4~\cite{paszke2019pytorch}. Mixed-precision
+(AMP) was enabled, reaching 210\,img/s.
+
+\FloatBarrier

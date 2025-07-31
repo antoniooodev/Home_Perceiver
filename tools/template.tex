@@ -1,0 +1,27 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx,booktabs,geometry}
+\geometry{margin=2.5cm}
+
+\title{Visual-Detection Module – Final Report}
+\author{Antonio Tangaro}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Experimental Setup}
+Two modes (A/B) and a headless multi-class detector were benchmarked on a
+Mac M2. Each run logs per-frame detections to JSONL (Step 1).  Step 2
+converts these logs to CSV and class-frequency plots.
+
+\section*{Run Summaries}
+\input{table.tex}  % injected by build_report.py
+
+\section*{Class-Distribution Plot}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{classes.png}
+  \caption{Top-15 classes detected in the showcased run.}
+\end{figure}
+
+\end{document}

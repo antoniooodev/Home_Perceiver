@@ -1,0 +1,32 @@
+% !TEX root = template.tex
+\section{Concluding Remarks}
+
+Over the course of this project we implemented an end-to-end, real-time
+perception stack that couples YOLOv8s-seg with Keypoint-RCNN and a lightweight
+IoU tracker, achieving 34\,fps and mAP\textsubscript{50} up to 45\,\% on
+commodity hardware. The system processes raw webcam streams, returns
+pixel-level masks, 17-point human poses, and stable track IDs, all logged in
+JSONL for downstream analytics.
+
+From a broader perspective, the pipeline demonstrates that privacy-aware video
+analytics for domestic environments can be delivered without discrete GPUs or
+cloud resources. The combination of class-agnostic masks and skeletons enables
+fine-grained reasoning (e.g., hand–object interaction) while keeping the
+compute budget within the limits of smart-home hubs or kiosks. In practice,
+this opens the door to applications such as elderly-care monitoring,
+energy-efficient room automation, and interactive gaming on low-power devices.
+
+Several aspects remain to be improved. First, the object vocabulary is still
+limited to COCO plus HomeObjects; integrating an Objects-365 subset or training
+on synthetic data could boost recall in cluttered kitchens and garages.
+Second, robustness to abrupt camera motion is modest; incorporating a tiny
+optical-flow module or a motion-compensated buffer would mitigate ID switches.
+Finally, the exporter currently stores plain JSONL; embedding compressed depth
+maps would facilitate 3-D analytics without touching the raw video.
+
+Working on Apple’s MPS backend showed that Metal kernels can match mid-range
+NVIDIA GPUs for inference, but debugging tools are immature and model-loading
+times are unpredictable. The main hurdle was reconciling TorchScript with
+on-device quantisation; we solved it by freezing the graph after batch-norm
+fusion and exporting weights as FP16. These insights should help future teams
+port larger models onto the ever-growing Mac-silicon ecosystem.

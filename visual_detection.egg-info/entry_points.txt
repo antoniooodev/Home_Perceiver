@@ -1,0 +1,4 @@
+[console_scripts]
+demo_modeA = scripts.demo_modeA:main
+demo_modeB = scripts.demo_modeB:main
+detect_multiclass = scripts.detect_multiclass:main

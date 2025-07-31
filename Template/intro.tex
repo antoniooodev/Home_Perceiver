@@ -1,0 +1,24 @@
+% !TEX root = template.tex
+\section{Introduction}
+
+Intelligent visual perception is a key enabler for \emph{ambient-assisted living}~\cite{cook2009ambient}, domestic robotics and natural human–computer interaction.  
+A household-level system able to recognise everyday objects, estimate articulated human pose and keep consistent identities across time could unlock applications ranging from hands-free item retrieval to unobtrusive wellness monitoring, all within the stringent latency ($<\!50$ ms) and power budgets of consumer devices.
+
+Three practical hurdles still prevent this vision from becoming ubiquitous:
+\begin{enumerate}
+  \item \textbf{Coverage gap.} Detectors trained on canonical benchmarks such as COCO ~\cite{lin2014microsoft} overlook many common artefacts (e.\,g.\ electric kettles, TV remotes, pill boxes), while large-scale extensions like Objects-365~\cite{shao2019objects365} do not yet fully resolve the long tail of household items, leading to systematic false negatives in real homes.
+  \item \textbf{Resource envelope.} Even the most recent real-time detectors (e.\,g.\ YOLOv7~\cite{wang2022yolov7}) or multi-task variants often exceed the thermal and battery limits of laptops and edge accelerators; lightweight backbones (e.\,g.\ MobileNetV3) and mixed-precision inference~\cite{micikevicius2018mixed} only partially alleviate these constraints.
+  \item \textbf{Reproducibility.} Public pipelines rarely fuse object segmentation, 17-joint human pose and real-time tracking into a \emph{single}, openly reproducible framework suitable for coursework—most research code focuses on detection alone or pairs it with heavyweight trackers such as DeepSORT~\cite{wojke2017simple} or ByteTrack~\cite{zhang2022bytetrack}.
+\end{enumerate}
+
+\noindent\textbf{Home-Perceiver}, the capstone project presented in this paper, tackles these gaps with an entirely open-source perception stack.  
+A compact YOLOv8 segmentation head—fine-tuned on the new \emph{HomeObjects-3K} dataset~\cite{tangaro2025homeobjects3k}—feeds a slimmed Keypoint-RCNN pose estimator~\cite{he2017maskrcnn}; detections are stitched over time by a simple IoU tracker~\cite{bochinski2017high}.  
+Executed fully on-device, the pipeline reaches
+\begin{itemize}
+  \item \textbf{52 FPS} end-to-end at $640\!\times\!360$ px;
+  \item \textbf{41.7 mAP@50} on HomeObjects-3K while retaining competitive accuracy on COCO classes;
+  \item power draw $\leq\!20$ W, enabling battery-friendly field studies.
+\end{itemize}
+
+These results show that real-time, privacy-preserving perception for everyday environments is now feasible on commodity hardware and provide a reproducible reference for future coursework and research.
+

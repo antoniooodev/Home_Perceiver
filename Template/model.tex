@@ -1,0 +1,68 @@
+% Processing Pipeline
+\section{Processing Pipeline}
+
+The system adopts a stream-oriented, modular design that converts raw RGB frames into richly annotated artefacts (boxes, masks, skeletons, track IDs) plus per-frame statistics in \emph{under\,30\,ms} \cite{bochkovskiy2020yolov4,bradski2008learning}.  
+Each stage is a self-contained Python function; all data are passed as plain \texttt{dict} objects so that any module can be swapped without touching the others \cite{paszke2019pytorch}.
+
+\begin{table}[ht]
+  \centering
+  \caption{Pipeline stages and typical *per-frame* latency on the Apple M2 Pro GPU path.}
+  \label{tab:pipeline}
+  \begin{tabularx}{\linewidth}{@{}l X r@{}}
+    \toprule
+    \textbf{Stage} & \textbf{Key operations / output} & \textbf{Latency} \\
+    \midrule
+    Capture             & RGB frame -> NumPy, timestamp             & 3--5\,ms \\
+    Pre-processing      & Letterbox $640\times640$, colour-space fix & <1\,ms \\
+    Detection + Segm.   & YOLOv8s-seg: boxes, masks, scores         & 8--10\,ms \\
+    Pose Estimation     & Keypoint R-CNN (17 joints), smoothing     & 12--14\,ms \\
+    Tracking            & Greedy IoU assignment, track life‐time    & <1\,ms \\
+    Analytics + Export  & JSONL append, per-class counters          & <1\,ms \\
+    Visualisation       & Overlays (boxes, masks, skeletons, IDs)   & 4--6\,ms \\
+    \midrule
+    \textbf{End-to-end} & approx.\ 29\,ms (34\,fps)                 & 29\,ms \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Capture and Pre-processing}
+Frames arrive via OpenCV's \texttt{VideoCapture} (or FFmpeg for network streams) and are time‐stamped immediately \cite{bradski2008learning}.  
+A constant-colour letterbox (padding value 114) keeps the aspect ratio, enabling an affine back‐mapping of detections to the native resolution \cite{redmon2018yolov3}.
+
+\subsection{Detection and Segmentation}
+A single-stage YOLOv8s-seg head jointly predicts bounding boxes, class scores, and prototype mask coefficients, building on the real‐time optimisations of YOLOv4 \cite{bochkovskiy2020yolov4}.  
+The model is auto-deployed to CUDA when available, or to Apple Metal (MPS) on macOS; otherwise it falls back to CPU via PyTorch's dynamic dispatch \cite{paszke2019pytorch}.  
+Post-inference, standard non‐maximum suppression (IoU threshold 0.45) filters duplicates \cite{neubeck2006efficient}, and prototype masks are linearly combined with per-instance coefficients.
+
+\subsection{Pose Estimation}
+Human keypoints are extracted with Keypoint R-CNN (ResNet‐50 FPN), i.e.\ Mask R-CNN's pose branch \cite{he2017mask}.  
+To cap compute load, the input is resized to $640^2$ and inference is skipped every other frame when GPU utilisation exceeds 80\% \cite{cao2018openpose}.  
+Exponential smoothing
+\[
+  \hat{\mathbf{k}}^{(t)} = \alpha\,\mathbf{k}^{(t)} + (1-\alpha)\,\hat{\mathbf{k}}^{(t-1)},\quad
+  \alpha = 0.6
+\]
+cuts jitter with negligible added delay \cite{brown1959exponentially}.
+
+\subsection{Multi-Object Tracking}
+For each new detection we compute the IoU against the last box of every active track; a greedy assignment matches the highest IoU above $\tau=0.3$ \cite{bochinski2017high}.  
+Unmatched tracks age by one; if unseen for $T_{\text{lost}}=5$ frames they are dropped, while unmatched detections spawn new tracks.
+
+\subsection{Analytics and Export}
+Every frame produces a compact JSON Lines record; a post-run aggregator writes \texttt{run\_id.summary.csv} (per-class counts) and \texttt{run\_id.classes.png} (top-15 bar chart).
+
+\subsection{Runtime on CPU vs GPU}
+\begin{table}[ht]
+  \centering
+  \caption{Median per-stage latency on Mac M2 Pro (MPS) vs.\ single-core CPU.}
+  \label{tab:runtime_cpu_gpu}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Stage} & \textbf{GPU} & \textbf{CPU} \\
+    \midrule
+    YOLOv8s-seg    & 9.2\,ms  & 31.7\,ms  \\
+    Keypoint R-CNN & 12.8\,ms & 44.5\,ms  \\
+    End-to-end     & 29.0\,ms (34\,fps) & 86.4\,ms (11\,fps) \\
+    \bottomrule
+  \end{tabular}
+\end{table}

@@ -1,0 +1,97 @@
+
+\section{Results}
+\FloatBarrier
+The evaluation covers three complementary aspects—\emph{accuracy}, \emph{runtime}, and
+\emph{robustness}—using two public datasets plus a live-capture stress test.
+All experiments ran on a MacBook Pro (M2 Pro, 32 GB RAM) with Python 3.11;
+GPU figures refer to Apple Metal, CPU figures to a single high-performance core.
+
+% ---------------------------------------------------------
+\subsection{Quantitative Performance}
+\FloatBarrier
+\begin{table}[ht]
+  \scriptsize
+  \centering
+  \caption{Detection, segmentation, pose and tracking accuracy.}
+  \label{tab:quant}
+  \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}} l l r r r @{}}
+    \toprule
+    Dataset \& task                & Metric   & Pipeline & Ablated$^{\dagger}$ & Baseline$^{\ddagger}$ \\
+    \midrule
+    COCO-val2017 detection         & mAP\textsubscript{50} & 37.2\,\% & 33.9\,\% & 33.5\,\% \\
+    COCO-val2017 segmentation      & mIoU     & 0.46     & 0.43     & 0.41     \\
+    HomeObjects-3K detection       & mAP\textsubscript{50} & 45.3\,\% & 41.2\,\% & 42.7\,\% \\
+    Keypoint-R-CNN (COCO-kp14)     & AP@0.5   & 0.65     & 0.62     & 0.64     \\
+    Multi-tracking                 & MOTA     & 0.72     & 0.67     & 0.68     \\
+                                   & IDF1     & 0.69     & 0.64     & 0.66     \\
+    \bottomrule
+  \end{tabular*}
+  \vspace{0.5ex}
+  \footnotesize
+  $^{\dagger}$No smoothing or mask refinement. \;
+  $^{\ddagger}$YOLOv5s \,+ DeepSORT on identical hardware.
+\end{table}
+
+% ---------------------------------------------------------
+\subsection{Runtime Analysis}
+\FloatBarrier
+\begin{table}[ht]
+  \scriptsize
+  \centering
+  \caption{Median per-stage latency on GPU versus CPU.}
+  \label{tab:runtime}
+  \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}} l r r @{}}
+    \toprule
+    Stage                & GPU             & CPU              \\
+    \midrule
+    Capture + resize     & 4.1 ms          & 4.1 ms           \\
+    YOLOv8s-seg          & 9.2 ms          & 31.7 ms          \\
+    Keypoint R-CNN       & 12.8 ms$^{*}$   & 44.5 ms$^{*}$    \\
+    Tracking             & 0.8 ms          & 0.8 ms           \\
+    Visual overlay       & 5.3 ms          & 5.3 ms           \\
+    \midrule
+    \textbf{End-to-end}  & 29.0 ms (34 fps) & 86.4 ms (11 fps) \\
+    \bottomrule
+  \end{tabular*}
+  \vspace{0.5ex}
+  \footnotesize
+  $^{*}$Pose module executed every second frame when GPU utilisation \(>\!80\%\).
+\end{table}
+
+% ---------------------------------------------------------
+\subsection{Qualitative Evaluation}
+\FloatBarrier
+\begin{itemize}
+  \item Pixel masks follow object boundaries closely, enabling precise area and distance measurements.
+  \item Exponential smoothing removes “vibrating’’ keypoints, especially on wrists and ankles.
+  \item Track IDs stay consistent through moderate occlusions.
+\end{itemize}
+
+% ---------------------------------------------------------
+\subsection{Failure Modes}
+\FloatBarrier
+\begin{table}[ht]
+  \scriptsize
+  \centering
+  \caption{Typical failure cases and mitigations.}
+  \label{tab:fail}
+  \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}} l l l @{}}
+    \toprule
+    Situation                     & Observed issue                 & Mitigation                              \\
+    \midrule
+    Glass reflections             & Spurious masks on windows      & Lower conf.\ threshold 0.25\,$\rightarrow$\,0.15 plus pose cue \\
+    Fast pans ($>\!90^{\circ}\!\!/\text{s}$) & ID switches                     & Longer motion horizon or optical flow   \\
+    Over-exposed highlights       & Missing face keypoints         & Lock exposure or enable HDR             \\
+    \bottomrule
+  \end{tabular*}
+\end{table}
+
+% ---------------------------------------------------------
+\subsection{Ablation Study Highlights}
+\FloatBarrier
+\begin{itemize}
+  \item \emph{Mask refinement off}: $\!\!-2.1$ pp mAP, $-1$ ms latency.
+  \item \emph{IoU threshold 0.5}: $+0.6$ pp IDF1, $+7$ \% ID switches.
+  \item \emph{No keypoint smoothing}: $\!\!-3.2$ pp AP, gain $\approx$0.2 ms (disabled).
+\end{itemize}
+\FloatBarrier
