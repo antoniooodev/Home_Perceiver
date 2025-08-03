@@ -51,7 +51,7 @@ visual_detection/
 
 ```bash
 git clone https://github.com/antoniooodev/Home_Perceiver.git
-cd visual_detection
+cd Home_Perceiver
 python3.11 -m venv .venv
 source .venv/bin/activate
 ```
