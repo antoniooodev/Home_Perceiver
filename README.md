@@ -50,7 +50,7 @@ visual_detection/
 \### 1 · Clone & create venv (🐍 ≥ 3.11)
 
 ```bash
-git clone [https://github.com/antoniooodev/visual_detection.git](https://github.com/antoniooodev/Home_Perceiver.git)
+git clone https://github.com/antoniooodev/Home_Perceiver.git
 cd visual_detection
 python3.11 -m venv .venv
 source .venv/bin/activate
